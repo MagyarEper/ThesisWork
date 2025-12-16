@@ -12,9 +12,9 @@ from model.utils import fix_len_compatibility
 
 
 # data parameters
-train_filelist_path = "/Grad-TTS/resources/files/metadata_train.txt"
-valid_filelist_path = "/Grad-TTS/resources/files/metadata_valid.txt"
-test_filelist_path = "/Grad-TTS/resources/files/metadata_test.txt"
+train_filelist_path = "resources/files/metadata_train.txt"
+valid_filelist_path = "resources/files/metadata_valid.txt"
+test_filelist_path = "resources/files/metadata_test.txt"
 cmudict_path = None
 add_blank = True
 n_feats = 80

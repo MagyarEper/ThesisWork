@@ -118,8 +118,8 @@ class TextMelSpeakerDataset(torch.utils.data.Dataset):
         random.shuffle(self.filelist)
 
     def get_triplet(self, line):
-        filepath, text, speaker = line[0], line[1], line[2]
-        text = self.get_text(text, add_blank=self.add_blank)
+        filepath, text, speaker, sampa = line[0], line[1], line[2], line[3]
+        text = self.get_text(sampa, add_blank=self.add_blank)  # Use SAMPA phonemes
         mel = self.get_mel(filepath)
         speaker = self.get_speaker(speaker)
         return (text, mel, speaker)
@@ -131,12 +131,32 @@ class TextMelSpeakerDataset(torch.utils.data.Dataset):
                               self.win_length, self.f_min, self.f_max, center=False).squeeze()
         return mel
 
-    def get_text(self, text, add_blank=True):
-        text_norm = text_to_sequence(text, dictionary=self.cmudict)
-        if self.add_blank:
+    def get_text(self, sampa_phonemes, add_blank=True):
+        # Parse SAMPA phonemes directly (no CMUDict needed)
+        text_norm = self.get_phoneme_ids(sampa_phonemes)
+        if add_blank:
             text_norm = intersperse(text_norm, len(symbols))  # add a blank token, whose id number is len(symbols)
         text_norm = torch.LongTensor(text_norm)
         return text_norm
+    
+    def get_phoneme_ids(self, sampa_string):
+        """Convert SAMPA phoneme string to list of symbol IDs."""
+        phoneme_ids = []
+        i = 0
+        while i < len(sampa_string):
+            # Try multi-character phonemes first (longest match)
+            matched = False
+            for length in [2, 1]:  # Try 2-char, then 1-char
+                if i + length <= len(sampa_string):
+                    candidate = sampa_string[i:i+length]
+                    if candidate in symbols:
+                        phoneme_ids.append(symbols.index(candidate))
+                        i += length
+                        matched = True
+                        break
+            if not matched:
+                i += 1  # Skip unknown character
+        return phoneme_ids
 
     def get_speaker(self, speaker):
         speaker = torch.LongTensor([int(speaker)])

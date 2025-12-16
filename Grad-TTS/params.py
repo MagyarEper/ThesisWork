@@ -13,7 +13,7 @@ from model.utils import fix_len_compatibility
 
 # data parameters
 train_filelist_path = "resources/files/metadata_train.txt"
-valid_filelist_path = "resources/files/metadata_valid.txt"
+valid_filelist_path = "resources/files/metadata_val.txt"
 test_filelist_path = "resources/files/metadata_test.txt"
 cmudict_path = None
 add_blank = True

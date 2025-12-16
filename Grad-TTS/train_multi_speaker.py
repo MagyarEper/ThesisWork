@@ -12,6 +12,7 @@ from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
+from torch.cuda.amp import autocast, GradScaler
 
 import params
 from model import GradTTS
@@ -87,6 +88,10 @@ if __name__ == "__main__":
 
     print('Initializing optimizer...')
     optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate)
+    
+    # Mixed precision training for better performance
+    scaler = GradScaler()
+    print('Using mixed precision training (AMP)')
 
     print('Logging test batch...')
     test_batch = test_dataset.sample_test_batch(size=params.test_size)
@@ -136,17 +141,27 @@ if __name__ == "__main__":
                 x, x_lengths = batch['x'].cuda(), batch['x_lengths'].cuda()
                 y, y_lengths = batch['y'].cuda(), batch['y_lengths'].cuda()
                 spk = batch['spk'].cuda()
-                dur_loss, prior_loss, diff_loss = model.compute_loss(x, x_lengths,
-                                                                     y, y_lengths,
-                                                                     spk=spk, out_size=out_size)
-                loss = sum([dur_loss, prior_loss, diff_loss])
-                loss.backward()
-
+                
+                # Mixed precision forward pass
+                with autocast():
+                    dur_loss, prior_loss, diff_loss = model.compute_loss(x, x_lengths,
+                                                                         y, y_lengths,
+                                                                         spk=spk, out_size=out_size)
+                    loss = sum([dur_loss, prior_loss, diff_loss])
+                
+                # Mixed precision backward pass
+                scaler.scale(loss).backward()
+                
+                # Gradient clipping
+                scaler.unscale_(optimizer)
                 enc_grad_norm = torch.nn.utils.clip_grad_norm_(model.encoder.parameters(), 
                                                             max_norm=1)
                 dec_grad_norm = torch.nn.utils.clip_grad_norm_(model.decoder.parameters(), 
                                                             max_norm=1)
-                optimizer.step()
+                
+                # Optimizer step with scaler
+                scaler.step(optimizer)
+                scaler.update()
 
                 logger.add_scalar('training/duration_loss', dur_loss,
                                 global_step=iteration)

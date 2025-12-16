@@ -18,7 +18,7 @@ test_filelist_path = "resources/files/metadata_test.txt"
 cmudict_path = None
 add_blank = True
 n_feats = 80
-n_spks = 42  # Number of speakers in Hungarian dysarthric dataset
+n_spks = 26  # Number of speakers in Hungarian dysarthric dataset
 spk_emb_dim = 64
 n_feats = 80
 n_fft = 1024
@@ -45,11 +45,11 @@ beta_max = 20.0
 pe_scale = 1000  # 1 for `grad-tts-old.pt` checkpoint
 
 # training parameters
-log_dir = 'logs/new_exp'
+log_dir = 'logs/hungarian_dysarthric'
 test_size = 4
-n_epochs = 10000
-batch_size = 16
+n_epochs = 1000  # Reduced from 10000 - typically 500-1000 epochs is sufficient
+batch_size = 32  # Increased from 16 - utilize 16GB VRAM better
 learning_rate = 1e-4
 seed = 37
-save_every = 1
+save_every = 50  # Save checkpoints every 50 epochs instead of every epoch
 out_size = fix_len_compatibility(2*22050//256)

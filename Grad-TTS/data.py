@@ -114,6 +114,12 @@ class TextMelSpeakerDataset(torch.utils.data.Dataset):
         self.f_min = f_min
         self.f_max = f_max
         self.add_blank = add_blank
+        
+        # Create speaker ID mapping
+        unique_speakers = sorted(set(line[2] for line in self.filelist))
+        self.speaker_to_id = {spk: idx for idx, spk in enumerate(unique_speakers)}
+        print(f"Found {len(unique_speakers)} unique speakers: {unique_speakers[:5]}...")
+        
         random.seed(random_seed)
         random.shuffle(self.filelist)
 
@@ -161,7 +167,9 @@ class TextMelSpeakerDataset(torch.utils.data.Dataset):
         return phoneme_ids
 
     def get_speaker(self, speaker):
-        speaker = torch.LongTensor([int(speaker)])
+        # Map speaker string to integer ID
+        speaker_id = self.speaker_to_id[speaker]
+        speaker = torch.LongTensor([speaker_id])
         return speaker
 
     def __getitem__(self, index):

@@ -9,13 +9,13 @@
 import os
 from model.utils import fix_len_compatibility
 
-DATASET_ROOT = os.getenv('DATASET_ROOT', '/home/arcdeus/Documents/Thesis/BMEDataset')
+
 
 # data parameters
-train_filelist_path = os.path.join(DATASET_ROOT, 'rescources/metadata_train.txt')
-valid_filelist_path = os.path.join(DATASET_ROOT, 'rescources/metadata_valid.txt')
-test_filelist_path = os.path.join(DATASET_ROOT, 'rescources/metadata_test.txt')
-cmudict_path = os.path.join(DATASET_ROOT, 'resources/cmu_dictionary')
+train_filelist_path = "/Grad-TTS/resources/files/metadata_train.txt"
+valid_filelist_path = "/Grad-TTS/resources/files/metadata_valid.txt"
+test_filelist_path = "/Grad-TTS/resources/files/metadata_test.txt"
+cmudict_path = "/Grad-TTS/resources/files/cmu_dictionary"
 add_blank = True
 n_feats = 80
 n_spks = 1  # 247 for Libri-TTS filelist and 1 for LJSpeech

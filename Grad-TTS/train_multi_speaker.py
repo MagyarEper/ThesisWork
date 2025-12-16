@@ -22,7 +22,6 @@ from text.symbols import symbols
 
 train_filelist_path = params.train_filelist_path
 valid_filelist_path = params.valid_filelist_path
-cmudict_path = params.cmudict_path
 add_blank = params.add_blank
 n_spks = params.n_spks
 spk_emb_dim = params.spk_emb_dim
@@ -66,14 +65,14 @@ if __name__ == "__main__":
     logger = SummaryWriter(log_dir=log_dir)
 
     print('Initializing data loaders...')
-    train_dataset = TextMelSpeakerDataset(train_filelist_path, cmudict_path, add_blank,
+    train_dataset = TextMelSpeakerDataset(train_filelist_path, add_blank,
                                           n_fft, n_feats, sample_rate, hop_length,
                                           win_length, f_min, f_max)
     batch_collate = TextMelSpeakerBatchCollate()
     loader = DataLoader(dataset=train_dataset, batch_size=batch_size,
                         collate_fn=batch_collate, drop_last=True,
                         num_workers=8, shuffle=True)
-    test_dataset = TextMelSpeakerDataset(valid_filelist_path, cmudict_path, add_blank,
+    test_dataset = TextMelSpeakerDataset(valid_filelist_path, add_blank,
                                          n_fft, n_feats, sample_rate, hop_length,
                                          win_length, f_min, f_max)
 

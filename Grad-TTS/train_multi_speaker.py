@@ -71,7 +71,8 @@ if __name__ == "__main__":
     batch_collate = TextMelSpeakerBatchCollate()
     loader = DataLoader(dataset=train_dataset, batch_size=batch_size,
                         collate_fn=batch_collate, drop_last=True,
-                        num_workers=8, shuffle=True)
+                        num_workers=16, shuffle=True, pin_memory=True, 
+                        persistent_workers=True, prefetch_factor=4)
     test_dataset = TextMelSpeakerDataset(valid_filelist_path, add_blank,
                                          n_fft, n_feats, sample_rate, hop_length,
                                          win_length, f_min, f_max)

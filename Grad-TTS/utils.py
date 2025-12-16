@@ -46,10 +46,12 @@ def load_checkpoint(logdir, model, num=None):
 
 
 def save_figure_to_numpy(fig):
-    # Use tobytes() instead of deprecated tostring_rgb()
+    # Use buffer_rgba() for matplotlib 3.x compatibility
     fig.canvas.draw()
-    data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    buf = fig.canvas.buffer_rgba()
+    data = np.asarray(buf)
+    # Convert RGBA to RGB
+    data = data[:, :, :3]
     return data
 
 

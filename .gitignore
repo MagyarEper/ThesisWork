@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+
+# Training outputs
+logs/
+checkpoints/
+*.pt
+*.pth
+
+# Data (don't upload your dataset)
+*.wav
+*.mp3
+*.flac
+*.txt  # Don't upload metadata with absolute paths
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Compiled Cython
+*.c
+model/monotonic_align/*.so
+model/monotonic_align/build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.log
+*.tmp
+
+# Environment
+.env
+installed_packages.txt
+
+# Config overrides (if you create local configs)
+config.local.yaml

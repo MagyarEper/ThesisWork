@@ -59,14 +59,21 @@ def load_sampa_dictionary(dict_path):
             line = line.strip()
             if '\t' in line:  # Tab-separated
                 text, sampa = line.split('\t', 1)
-                text = text.strip().lower()
+                # Normalize text for matching
+                text_normalized = text.strip().lower()
+                text_normalized = re.sub(r'\[.*?\]', '', text_normalized)  # Remove brackets
+                text_normalized = re.sub(r'[^\w\s]', '', text_normalized)  # Remove punctuation
+                text_normalized = re.sub(r'\s+', ' ', text_normalized).strip()
                 sampa = sampa.strip()
-                sampa_dict[text] = sampa
+                sampa_dict[text_normalized] = sampa
             elif '→' in line:  # Arrow-separated (fallback)
                 text, sampa = line.split('→', 1)
-                text = text.strip().lower()
+                text_normalized = text.strip().lower()
+                text_normalized = re.sub(r'\[.*?\]', '', text_normalized)
+                text_normalized = re.sub(r'[^\w\s]', '', text_normalized)
+                text_normalized = re.sub(r'\s+', ' ', text_normalized).strip()
                 sampa = sampa.strip()
-                sampa_dict[text] = sampa
+                sampa_dict[text_normalized] = sampa
     
     print(f"Loaded {len(sampa_dict)} entries from SAMPA dictionary")
     return sampa_dict
@@ -77,6 +84,20 @@ def clean_text(text):
         return ""
     # Remove [word] patterns
     text = re.sub(r'\[.*?\]', '', str(text))
+    # Remove extra spaces
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+def normalize_text_for_lookup(text):
+    """Normalize text for dictionary lookup - more aggressive than clean_text."""
+    if pd.isna(text):
+        return ""
+    # Convert to string and lowercase
+    text = str(text).lower()
+    # Remove brackets and their contents
+    text = re.sub(r'\[.*?\]', '', text)
+    # Remove all punctuation
+    text = re.sub(r'[^\w\s]', '', text)
     # Remove extra spaces
     text = re.sub(r'\s+', ' ', text).strip()
     return text
@@ -146,10 +167,10 @@ def prepare_dataframe(df, audio_root, sampa_dict=None):
         
         for idx, row in df.iterrows():
             if pd.isna(row['sampa']) or row['sampa_clean'] == '':
-                # Try to look up in dictionary
-                text_lower = row['text_clean'].lower()
-                if text_lower in sampa_dict:
-                    df.at[idx, 'sampa_clean'] = sampa_dict[text_lower].replace(' ', '')
+                # Try to look up in dictionary using normalized text
+                text_normalized = normalize_text_for_lookup(row['text_clean'])
+                if text_normalized in sampa_dict:
+                    df.at[idx, 'sampa_clean'] = sampa_dict[text_normalized].replace(' ', '')
                     filled_sampa_count += 1
                 else:
                     missing_sampa_count += 1

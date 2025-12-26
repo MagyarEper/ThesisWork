@@ -10,6 +10,8 @@ build/
 # Training outputs
 logs/
 checkpoints/
+checkpts/*.pt
+checkpts/*.pth
 *.pt
 *.pth
 
@@ -17,7 +19,15 @@ checkpoints/
 *.wav
 *.mp3
 *.flac
-*.txt  # Don't upload metadata with absolute paths
+# Don't upload metadata with absolute paths, but keep dictionaries
+**/metadata*.txt
+**/files/*.txt
+# Exception: allow SAMPA dictionary
+!hungarian_sampa_dict.txt
+
+# Download artifacts
+wget-log
+download?*
 
 # IDE
 .vscode/

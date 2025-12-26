@@ -57,7 +57,12 @@ def load_sampa_dictionary(dict_path):
     with open(dict_path, 'r', encoding='utf-8') as f:
         for line in f:
             line = line.strip()
-            if '→' in line:
+            if '\t' in line:  # Tab-separated
+                text, sampa = line.split('\t', 1)
+                text = text.strip().lower()
+                sampa = sampa.strip()
+                sampa_dict[text] = sampa
+            elif '→' in line:  # Arrow-separated (fallback)
                 text, sampa = line.split('→', 1)
                 text = text.strip().lower()
                 sampa = sampa.strip()

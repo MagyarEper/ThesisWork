@@ -66,21 +66,28 @@ def load_metadata(input_file):
     file_ext = Path(input_file).suffix.lower()
     
     if file_ext == '.xlsx' or file_ext == '.xls':
-        df = pd.read_excel(input_file, header=None)
+        df = pd.read_excel(input_file, header=0)  # Use first row as header
     elif file_ext == '.csv':
-        df = pd.read_csv(input_file, header=None)
+        df = pd.read_csv(input_file, header=0)  # Use first row as header
     else:
         raise ValueError(f"Unsupported file format: {file_ext}")
     
-    # Assuming columns are: speaker, file_id, seq, full_id1, full_id2, type, text, sampa
-    # Adjust column indices based on your actual data
-    expected_cols = 8
-    if len(df.columns) >= expected_cols:
-        df.columns = ['speaker', 'file_id', 'seq', 'full_id1', 'full_id2', 'type', 'text', 'sampa']
-    else:
-        print(f"Warning: Expected {expected_cols} columns, found {len(df.columns)}")
-        print(f"Columns: {df.columns.tolist()}")
-        # Adjust column names based on actual structure
+    # The Excel has columns with headers, rename them to standard names
+    # Expected columns: ID, Utterance ID, Code, Full_ID, Full_ID.wav, Utterance structure, Transcript, Sampa
+    column_mapping = {
+        'ID': 'speaker',
+        'Sampa': 'sampa',
+        'Transcript': 'text',
+        'Full_ID.wav': 'full_id1'  # This column has the actual filename
+    }
+    df = df.rename(columns=column_mapping)
+    
+    # Verify we have the required columns
+    required_cols = ['speaker', 'text', 'sampa', 'full_id1']
+    missing_cols = [col for col in required_cols if col not in df.columns]
+    if missing_cols:
+        print(f"Error: Missing required columns: {missing_cols}")
+        print(f"Available columns: {df.columns.tolist()}")
         raise ValueError("Please verify your input file structure")
     
     print(f"Loaded {len(df)} records")

@@ -29,6 +29,9 @@ AUDIO_ROOT = '/home/berta/data/HungarianDysartriaDatabase/wav'
 # Output directory for metadata files
 OUTPUT_DIR = './Grad-TTS/resources/files'
 
+# Hungarian SAMPA dictionary (for filling in missing SAMPA)
+SAMPA_DICT_PATH = './Grad-TTS/hungarian_sampa_dict.txt'
+
 # Split ratios
 TRAIN_RATIO = 0.75
 VAL_RATIO = 0.15
@@ -37,9 +40,31 @@ TEST_RATIO = 0.10  # Remaining after train and val
 # Random seed for reproducibility
 RANDOM_SEED = 42
 
+# Fill missing SAMPA using dictionary?
+FILL_MISSING_SAMPA = True
+
 # ==============================================================================
 # FUNCTIONS
 # ==============================================================================
+
+def load_sampa_dictionary(dict_path):
+    """Load Hungarian SAMPA dictionary from file."""
+    if not os.path.exists(dict_path):
+        print(f"Warning: SAMPA dictionary not found at {dict_path}")
+        return {}
+    
+    sampa_dict = {}
+    with open(dict_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if '→' in line:
+                text, sampa = line.split('→', 1)
+                text = text.strip().lower()
+                sampa = sampa.strip()
+                sampa_dict[text] = sampa
+    
+    print(f"Loaded {len(sampa_dict)} entries from SAMPA dictionary")
+    return sampa_dict
 
 def clean_text(text):
     """Remove brackets and their contents (false starts) from text."""
@@ -99,7 +124,7 @@ def load_metadata(input_file):
     
     return df
 
-def prepare_dataframe(df, audio_root):
+def prepare_dataframe(df, audio_root, sampa_dict=None):
     """Prepare dataframe with cleaned text, SAMPA, and audio paths."""
     print("\nPreparing data...")
     
@@ -108,6 +133,25 @@ def prepare_dataframe(df, audio_root):
     
     # Clean SAMPA (remove spaces)
     df['sampa_clean'] = df['sampa'].apply(clean_sampa)
+    
+    # Fill missing SAMPA using dictionary
+    if sampa_dict and FILL_MISSING_SAMPA:
+        missing_sampa_count = 0
+        filled_sampa_count = 0
+        
+        for idx, row in df.iterrows():
+            if pd.isna(row['sampa']) or row['sampa_clean'] == '':
+                # Try to look up in dictionary
+                text_lower = row['text_clean'].lower()
+                if text_lower in sampa_dict:
+                    df.at[idx, 'sampa_clean'] = sampa_dict[text_lower].replace(' ', '')
+                    filled_sampa_count += 1
+                else:
+                    missing_sampa_count += 1
+        
+        print(f"\nFilled {filled_sampa_count} missing SAMPA entries from dictionary")
+        if missing_sampa_count > 0:
+            print(f"Warning: {missing_sampa_count} entries still have no SAMPA (not in dictionary)")
     
     # Create full audio file paths
     df['wav_path'] = df['full_id1'].apply(lambda x: os.path.join(audio_root, f"{x}.wav"))
@@ -224,11 +268,16 @@ def main():
     # Create output directory
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     
+    # Load SAMPA dictionary if needed
+    sampa_dict = None
+    if FILL_MISSING_SAMPA:
+        sampa_dict = load_sampa_dictionary(SAMPA_DICT_PATH)
+    
     # Load data
     df = load_metadata(INPUT_FILE)
     
     # Prepare data
-    df_valid = prepare_dataframe(df, AUDIO_ROOT)
+    df_valid = prepare_dataframe(df, AUDIO_ROOT, sampa_dict)
     
     if len(df_valid) == 0:
         print("\nError: No valid samples found!")

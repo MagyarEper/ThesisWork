@@ -127,12 +127,26 @@ def prepare_dataframe(df, audio_root):
     df_valid = df[df['file_exists']].copy()
     print(f"\nValid samples: {len(df_valid)}/{len(df)}")
     
+    # Check what's being filtered
+    print("\nFiltering by empty text/SAMPA:")
+    empty_text = df_valid[df_valid['text_clean'].str.len() == 0]
+    empty_sampa = df_valid[df_valid['sampa_clean'].str.len() == 0]
+    print(f"  Rows with empty text: {len(empty_text)}")
+    print(f"  Rows with empty SAMPA: {len(empty_sampa)}")
+    
+    if len(empty_sampa) > 0:
+        print(f"  Speakers with empty SAMPA: {sorted(empty_sampa['speaker'].unique())}")
+        for speaker in sorted(empty_sampa['speaker'].unique()):
+            count = len(empty_sampa[empty_sampa['speaker'] == speaker])
+            total = len(df_valid[df_valid['speaker'] == speaker])
+            print(f"    {speaker}: {count}/{total} samples have empty SAMPA")
+    
     # Remove rows with empty text or SAMPA
     df_valid = df_valid[
         (df_valid['text_clean'].str.len() > 0) & 
         (df_valid['sampa_clean'].str.len() > 0)
     ]
-    print(f"After removing empty text/SAMPA: {len(df_valid)}")
+    print(f"\nAfter removing empty text/SAMPA: {len(df_valid)}")
     
     # Report which speakers survived
     print(f"\nFinal speaker count: {df_valid['speaker'].nunique()}")

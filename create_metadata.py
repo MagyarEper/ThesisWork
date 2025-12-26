@@ -92,6 +92,8 @@ def load_metadata(input_file):
     
     print(f"Loaded {len(df)} records")
     print(f"Columns: {df.columns.tolist()}")
+    print(f"\nUnique speakers in Excel: {df['speaker'].nunique()}")
+    print(f"Speaker list: {sorted(df['speaker'].unique())}")
     print(f"\nFirst few rows:")
     print(df.head())
     
@@ -131,6 +133,18 @@ def prepare_dataframe(df, audio_root):
         (df_valid['sampa_clean'].str.len() > 0)
     ]
     print(f"After removing empty text/SAMPA: {len(df_valid)}")
+    
+    # Report which speakers survived
+    print(f"\nFinal speaker count: {df_valid['speaker'].nunique()}")
+    print(f"Speakers with valid data: {sorted(df_valid['speaker'].unique())}")
+    
+    # Report which speakers were filtered out
+    all_speakers = set(df['speaker'].unique())
+    valid_speakers = set(df_valid['speaker'].unique())
+    filtered_speakers = all_speakers - valid_speakers
+    if filtered_speakers:
+        print(f"\nFiltered out {len(filtered_speakers)} speakers (no valid data):")
+        print(f"  {sorted(filtered_speakers)}")
     
     return df_valid
 

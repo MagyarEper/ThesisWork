@@ -1,0 +1,526 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+    <metadata>
+        <name>Grad-TTS Hungarian Dysarthric Speech Synthesis</name>
+        <version>1.0</version>
+        <date>2025-12-26</date>
+        <author>Makai Sándor</author>
+        <institution>Budapest University of Technology and Economics</institution>
+        <description>
+            Multi-speaker text-to-speech system for Hungarian dysarthric speech using 
+            Grad-TTS (Gradient-based Text-to-Speech) with diffusion models. Trained on 
+            38 speakers with SAMPA phoneme transcriptions for data augmentation purposes.
+        </description>
+    </metadata>
+
+    <dataset>
+        <name>Hungarian Dysarthria Database</name>
+        <location>
+            <remote>/home/berta/data/HungarianDysartriaDatabase/</remote>
+            <local>/home/arcdeus/Documents/Thesis/HungarianDysartriaDatabaseNew/</local>
+        </location>
+        <statistics>
+            <total_speakers>39</total_speakers>
+            <valid_speakers>38</valid_speakers>
+            <filtered_speakers>1</filtered_speakers>
+            <total_samples>10014</total_samples>
+            <valid_samples>9990</valid_samples>
+            <training_samples>7492</training_samples>
+            <validation_samples>1499</validation_samples>
+            <test_samples>999</test_samples>
+        </statistics>
+        <structure>
+            <metadata_file>SAMPA_transcripts_all.xlsx</metadata_file>
+            <audio_directory>wav/</audio_directory>
+            <sample_rate>22050</sample_rate>
+            <format>WAV (16-bit PCM)</format>
+        </structure>
+        <speakers>
+            <speaker_ids>C_001, C_002, C_003, C_004, C_005, C_006, C_007, C_008, C_009, C_010, 
+                        C_011, C_012, C_013, C_014, C_015, C_016, C_017, C_018, C_020, C_021, 
+                        C_022, C_023, C_024, C_025, C_026, C_027, C_028, C_029, C_030, C_031, 
+                        C_032, C_033, C_036, C_037, C_038, C_040, C_041, C_042</speaker_ids>
+            <missing>C_019, C_035, C_039</missing>
+            <filtered>C_034 (insufficient valid SAMPA transcriptions)</filtered>
+        </speakers>
+        <phonemes>
+            <system>SAMPA (Speech Assessment Methods Phonetic Alphabet)</system>
+            <language>Hungarian</language>
+            <count>93</count>
+            <description>Hungarian-specific SAMPA symbols including vowels, consonants, 
+                        and prosodic markers for dysarthric speech</description>
+        </phonemes>
+    </dataset>
+
+    <architecture>
+        <model>
+            <name>Grad-TTS</name>
+            <type>Diffusion-based Text-to-Speech</type>
+            <framework>PyTorch 2.5.1</framework>
+            <repository>https://github.com/huawei-noah/Speech-Backbones</repository>
+            <description>
+                Score-based decoder that generates mel-spectrograms from text via 
+                continuous-time diffusion process with monotonic alignment
+            </description>
+        </model>
+        
+        <components>
+            <text_encoder>
+                <type>Transformer-based</type>
+                <channels>192</channels>
+                <layers>6</layers>
+                <filter_channels>768</filter_channels>
+                <kernel_size>3</kernel_size>
+                <dropout>0.1</dropout>
+                <attention_heads>2</attention_heads>
+                <window_size>4</window_size>
+            </text_encoder>
+            
+            <duration_predictor>
+                <filter_channels>256</filter_channels>
+                <description>Predicts phoneme durations for alignment</description>
+            </duration_predictor>
+            
+            <decoder>
+                <type>Score-based diffusion decoder</type>
+                <dim>64</dim>
+                <beta_min>0.05</beta_min>
+                <beta_max>20.0</beta_max>
+                <pe_scale>1000</pe_scale>
+                <description>Generates mel-spectrograms via reverse diffusion</description>
+            </decoder>
+            
+            <speaker_embedding>
+                <num_speakers>38</num_speakers>
+                <embedding_dim>64</embedding_dim>
+                <description>Learnable speaker embeddings for multi-speaker synthesis</description>
+            </speaker_embedding>
+            
+            <monotonic_alignment>
+                <implementation>Cython-optimized</implementation>
+                <description>Efficient text-to-speech alignment using dynamic programming</description>
+            </monotonic_alignment>
+        </components>
+        
+        <vocoder>
+            <name>HiFi-GAN</name>
+            <version>V1</version>
+            <checkpoint>hifigan.pt (54MB)</checkpoint>
+            <config>hifigan-config.json</config>
+            <description>Neural vocoder for converting mel-spectrograms to audio waveforms</description>
+        </vocoder>
+        
+        <parameters>
+            <total>14.87M</total>
+            <trainable>14.87M</trainable>
+            <breakdown>
+                <text_encoder>~8M</text_encoder>
+                <decoder>~5M</decoder>
+                <speaker_embedding>2432 (38 × 64)</speaker_embedding>
+                <duration_predictor>~1.5M</duration_predictor>
+            </breakdown>
+        </parameters>
+    </architecture>
+
+    <training>
+        <configuration>
+            <epochs>1000</epochs>
+            <batch_size>32</batch_size>
+            <learning_rate>1e-4</learning_rate>
+            <optimizer>Adam</optimizer>
+            <mixed_precision>true</mixed_precision>
+            <amp_enabled>true</amp_enabled>
+            <seed>37</seed>
+            <save_frequency>100</save_frequency>
+        </configuration>
+        
+        <data_loading>
+            <num_workers>16</num_workers>
+            <pin_memory>true</pin_memory>
+            <persistent_workers>true</persistent_workers>
+            <prefetch_factor>4</prefetch_factor>
+        </data_loading>
+        
+        <audio_processing>
+            <sample_rate>22050</sample_rate>
+            <n_fft>1024</n_fft>
+            <hop_length>256</hop_length>
+            <win_length>1024</win_length>
+            <n_mels>80</n_mels>
+            <f_min>0</f_min>
+            <f_max>8000</f_max>
+        </audio_processing>
+        
+        <hardware>
+            <remote_machine>deep07</remote_machine>
+            <gpu>NVIDIA GPU (16GB VRAM)</gpu>
+            <cpu>16+ cores</cpu>
+            <ram>64GB+</ram>
+            <storage>SSD</storage>
+            <gpu_utilization>~15-16GB VRAM</gpu_utilization>
+        </hardware>
+        
+        <runtime>
+            <duration>~12 hours</duration>
+            <epochs_completed>1000</epochs_completed>
+            <checkpoint_size>57MB</checkpoint_size>
+        </runtime>
+        
+        <checkpoints>
+            <frequency>Every 100 epochs</frequency>
+            <total>10 checkpoints (100, 200, ..., 1000)</total>
+            <format>PyTorch state_dict (.pt)</format>
+            <storage>/home/makais/Thesis/ThesisWork/Grad-TTS/logs/hungarian_dysarthric/</storage>
+        </checkpoints>
+    </training>
+
+    <inference>
+        <configuration>
+            <timesteps>100</timesteps>
+            <temperature>1.5</temperature>
+            <description>Higher timesteps improve quality at cost of speed</description>
+        </configuration>
+        
+        <input>
+            <format>SAMPA phoneme string</format>
+            <speaker_id>Integer (0-37)</speaker_id>
+            <example>JiZd ki Oz OblOkot kiS:zoba:bO</example>
+        </input>
+        
+        <output>
+            <format>WAV audio file</format>
+            <sample_rate>22050</sample_rate>
+            <directory>~/Documents/Thesis/generated_audio/</directory>
+        </output>
+        
+        <speed>
+            <timesteps_10>~1-2 seconds per utterance</timesteps_10>
+            <timesteps_100>~5-10 seconds per utterance</timesteps_100>
+            <realtime_factor>Faster than real-time</realtime_factor>
+        </speed>
+    </inference>
+
+    <repository>
+        <github>
+            <url>https://github.com/MagyarEper/ThesisWork</url>
+            <branch>main</branch>
+        </github>
+        
+        <structure>
+            <root>/home/arcdeus/Documents/Thesis/grad-tts2/Speech-Backbones/</root>
+            <directories>
+                <directory name="Grad-TTS">
+                    <description>Main training and inference code</description>
+                    <files>
+                        <file name="train_multi_speaker.py">Multi-speaker training script with AMP</file>
+                        <file name="inference_multi_speaker.py">Multi-speaker inference script</file>
+                        <file name="data.py">Dataset classes for loading audio and SAMPA</file>
+                        <file name="params.py">Central configuration file</file>
+                        <file name="utils.py">Utility functions (plotting, logging)</file>
+                        <file name="check_checkpoint.py">Checkpoint inspection tool</file>
+                        <file name="extract_sampa_examples.py">SAMPA dictionary extraction</file>
+                        <file name="hungarian_sampa_dict.txt">4,137 text-to-SAMPA mappings</file>
+                    </files>
+                    <subdirectories>
+                        <subdirectory name="model">
+                            <file name="tts.py">Main Grad-TTS model</file>
+                            <file name="text_encoder.py">Transformer text encoder</file>
+                            <file name="diffusion.py">Diffusion decoder</file>
+                            <file name="base.py">Base model classes</file>
+                            <file name="utils.py">Model utilities</file>
+                            <subdirectory name="monotonic_align">
+                                <file name="core.pyx">Cython monotonic alignment</file>
+                                <file name="setup.py">Compilation script</file>
+                            </subdirectory>
+                        </subdirectory>
+                        <subdirectory name="text">
+                            <file name="symbols.py">SAMPA symbol definitions (93 symbols)</file>
+                            <file name="__init__.py">Text processing utilities</file>
+                        </subdirectory>
+                        <subdirectory name="hifi-gan">
+                            <file name="models.py">HiFi-GAN vocoder model</file>
+                            <file name="meldataset.py">Mel-spectrogram dataset</file>
+                            <file name="env.py">Audio processing functions</file>
+                        </subdirectory>
+                        <subdirectory name="resources/files">
+                            <file name="metadata_train.txt">Training metadata (7,492 samples)</file>
+                            <file name="metadata_val.txt">Validation metadata (1,499 samples)</file>
+                            <file name="metadata_test.txt">Test metadata (999 samples)</file>
+                        </subdirectory>
+                        <subdirectory name="checkpts">
+                            <file name="grad_1000.pt">Trained model checkpoint (57MB)</file>
+                            <file name="hifigan.pt">HiFi-GAN vocoder (54MB)</file>
+                            <file name="hifigan-config.json">Vocoder configuration</file>
+                        </subdirectory>
+                        <subdirectory name="logs/hungarian_dysarthric">
+                            <description>TensorBoard training logs</description>
+                        </subdirectory>
+                    </subdirectories>
+                </directory>
+                <directory name=".">
+                    <file name="create_metadata.py">Metadata generation with SAMPA auto-filling</file>
+                    <file name="README.md">Project documentation</file>
+                    <file name=".gitignore">Git ignore rules</file>
+                </directory>
+            </directories>
+        </structure>
+    </repository>
+
+    <tools_and_scripts>
+        <script name="create_metadata.py">
+            <purpose>Generate train/val/test metadata from Excel with SAMPA auto-filling</purpose>
+            <features>
+                <feature>Reads Excel/CSV with speaker, text, and SAMPA columns</feature>
+                <feature>Auto-fills missing SAMPA using hungarian_sampa_dict.txt</feature>
+                <feature>Text normalization for better dictionary matching</feature>
+                <feature>Verifies audio file existence</feature>
+                <feature>Stratified speaker-based train/val/test splitting</feature>
+                <feature>Diagnostic output for filtered speakers</feature>
+            </features>
+            <configuration>
+                <train_ratio>0.75</train_ratio>
+                <val_ratio>0.15</val_ratio>
+                <test_ratio>0.10</test_ratio>
+                <random_seed>42</random_seed>
+            </configuration>
+            <output_format>filepath|text|speaker|sampa</output_format>
+        </script>
+        
+        <script name="train_multi_speaker.py">
+            <purpose>Train multi-speaker Grad-TTS model</purpose>
+            <features>
+                <feature>Multi-speaker conditioning with learnable embeddings</feature>
+                <feature>Mixed precision training (AMP)</feature>
+                <feature>Gradient clipping for stability</feature>
+                <feature>TensorBoard logging</feature>
+                <feature>Periodic checkpoint saving</feature>
+                <feature>Validation loss monitoring</feature>
+            </features>
+            <optimizations>
+                <optimization>DataLoader with 16 workers</optimization>
+                <optimization>Pin memory for faster GPU transfer</optimization>
+                <optimization>Persistent workers to avoid reload</optimization>
+                <optimization>Prefetch factor 4</optimization>
+            </optimizations>
+        </script>
+        
+        <script name="inference_multi_speaker.py">
+            <purpose>Generate speech from SAMPA phonemes</purpose>
+            <features>
+                <feature>Multi-speaker synthesis (select by ID)</feature>
+                <feature>SAMPA phoneme input</feature>
+                <feature>HiFi-GAN vocoding</feature>
+                <feature>Configurable diffusion timesteps</feature>
+                <feature>Batch processing support</feature>
+            </features>
+            <usage>
+                <command>python inference_multi_speaker.py --checkpoint grad_1000.pt --speaker 0 --text "JiZd ki Oz OblOkot"</command>
+            </usage>
+        </script>
+        
+        <script name="check_checkpoint.py">
+            <purpose>Inspect model checkpoint details</purpose>
+            <output>
+                <item>Number of speakers</item>
+                <item>Speaker embedding dimensions</item>
+                <item>Total parameters</item>
+                <item>Model architecture details</item>
+            </output>
+        </script>
+        
+        <script name="extract_sampa_examples.py">
+            <purpose>Extract text-to-SAMPA dictionary from dataset</purpose>
+            <output>hungarian_sampa_dict.txt (4,137 unique mappings)</output>
+        </script>
+    </tools_and_scripts>
+
+    <dependencies>
+        <python_version>3.9-3.10</python_version>
+        <packages>
+            <package name="torch" version="2.5.1">PyTorch deep learning framework</package>
+            <package name="torchaudio" version="2.5.1">Audio processing</package>
+            <package name="numpy" version="1.26.4">Numerical computing</package>
+            <package name="scipy">Scientific computing</package>
+            <package name="librosa">Audio analysis</package>
+            <package name="pandas">Data manipulation (metadata processing)</package>
+            <package name="openpyxl">Excel file reading</package>
+            <package name="matplotlib">Plotting and visualization</package>
+            <package name="tensorboard">Training monitoring</package>
+            <package name="Cython">High-performance alignment code</package>
+            <package name="tqdm">Progress bars</package>
+        </packages>
+        <environments>
+            <environment name="local">
+                <type>Conda</type>
+                <name>grad-tts2</name>
+                <python>3.9</python>
+            </environment>
+            <environment name="remote">
+                <type>venv</type>
+                <name>thesis</name>
+                <python>3.10</python>
+                <location>/home/makais/venvs/thesis</location>
+            </environment>
+        </environments>
+    </dependencies>
+
+    <workflows>
+        <workflow name="Initial Setup">
+            <step number="1">Clone repository</step>
+            <step number="2">Install dependencies</step>
+            <step number="3">Compile Cython monotonic alignment module</step>
+            <step number="4">Download HiFi-GAN vocoder checkpoint</step>
+        </workflow>
+        
+        <workflow name="Data Preparation">
+            <step number="1">Prepare Excel metadata with speaker, text, SAMPA columns</step>
+            <step number="2">Place audio files in wav/ directory</step>
+            <step number="3">Extract SAMPA dictionary: python extract_sampa_examples.py</step>
+            <step number="4">Generate metadata: python create_metadata.py</step>
+            <step number="5">Verify speaker count matches params.py (n_spks)</step>
+        </workflow>
+        
+        <workflow name="Training">
+            <step number="1">Update params.py with dataset paths and hyperparameters</step>
+            <step number="2">SSH to remote machine</step>
+            <step number="3">Start training: nohup python3 train_multi_speaker.py > training.log 2>&1 &amp;</step>
+            <step number="4">Monitor: tail -f training.log</step>
+            <step number="5">Check TensorBoard: tensorboard --logdir logs/hungarian_dysarthric</step>
+            <step number="6">Wait for completion (~12 hours)</step>
+            <step number="7">Download checkpoint to local machine</step>
+        </workflow>
+        
+        <workflow name="Inference">
+            <step number="1">Update params.py with n_spks matching trained model</step>
+            <step number="2">Place checkpoint in checkpts/ directory</step>
+            <step number="3">Run inference_multi_speaker.py with SAMPA text and speaker ID</step>
+            <step number="4">Find generated audio in output directory</step>
+        </workflow>
+        
+        <workflow name="Batch Generation">
+            <step number="1">Prepare list of SAMPA texts</step>
+            <step number="2">Create script to iterate through texts and speakers</step>
+            <step number="3">Run batch inference</step>
+            <step number="4">Organize output by speaker/text for augmentation</step>
+        </workflow>
+    </workflows>
+
+    <troubleshooting>
+        <issue name="Cython compilation fails">
+            <symptom>ImportError: cannot import name 'core'</symptom>
+            <solution>
+                <step>cd Grad-TTS/model/monotonic_align</step>
+                <step>python setup.py build_ext --inplace</step>
+                <step>Verify core.*.so file created</step>
+            </solution>
+        </issue>
+        
+        <issue name="Speaker count mismatch">
+            <symptom>RuntimeError: size mismatch for spk_emb.weight</symptom>
+            <solution>
+                <step>Check metadata: cut -d'|' -f3 resources/files/metadata_train.txt | sort -u | wc -l</step>
+                <step>Update params.py: n_spks = [actual_count]</step>
+                <step>Restart training or use check_checkpoint.py to verify checkpoint</step>
+            </solution>
+        </issue>
+        
+        <issue name="CUDA out of memory">
+            <symptom>RuntimeError: CUDA out of memory</symptom>
+            <solution>
+                <step>Reduce batch_size in params.py (try 16, 8, or 4)</step>
+                <step>Enable mixed precision (already enabled)</step>
+                <step>Reduce num_workers in DataLoader</step>
+            </solution>
+        </issue>
+        
+        <issue name="Missing SAMPA transcriptions">
+            <symptom>Many speakers filtered out during metadata generation</symptom>
+            <solution>
+                <step>Ensure FILL_MISSING_SAMPA = True in create_metadata.py</step>
+                <step>Verify hungarian_sampa_dict.txt exists and has entries</step>
+                <step>Check text normalization matches dictionary format</step>
+                <step>Manually add missing text-to-SAMPA mappings if needed</step>
+            </solution>
+        </issue>
+        
+        <issue name="Poor audio quality">
+            <symptom>Generated audio sounds robotic or unintelligible</symptom>
+            <solution>
+                <step>Increase inference timesteps (100 instead of 10)</step>
+                <step>Try different checkpoints (earlier or later in training)</step>
+                <step>Verify HiFi-GAN vocoder is loaded correctly</step>
+                <step>Check SAMPA input is correctly formatted</step>
+            </solution>
+        </issue>
+    </troubleshooting>
+
+    <future_work>
+        <improvement>
+            <title>Increase speaker diversity</title>
+            <description>Train on all 39 speakers by generating SAMPA for missing transcriptions using G2P tool</description>
+            <priority>Medium</priority>
+        </improvement>
+        
+        <improvement>
+            <title>Learning rate scheduling</title>
+            <description>Implement warmup and decay for more stable convergence</description>
+            <priority>Low</priority>
+        </improvement>
+        
+        <improvement>
+            <title>Data augmentation</title>
+            <description>Apply pitch shifting, time stretching, or noise injection during training</description>
+            <priority>Medium</priority>
+        </improvement>
+        
+        <improvement>
+            <title>Fine-tuning</title>
+            <description>Continue training from checkpoint with lower learning rate</description>
+            <priority>High</priority>
+        </improvement>
+        
+        <improvement>
+            <title>Evaluation metrics</title>
+            <description>Implement MOS prediction, speaker similarity, and prosody metrics</description>
+            <priority>High</priority>
+        </improvement>
+        
+        <improvement>
+            <title>Real-time synthesis</title>
+            <description>Optimize inference speed for real-time applications</description>
+            <priority>Low</priority>
+        </improvement>
+    </future_work>
+
+    <references>
+        <paper>
+            <title>Grad-TTS: A Diffusion Probabilistic Model for Text-to-Speech</title>
+            <authors>Vadim Popov, Ivan Vovk, Vladimir Gogoryan, Tasnima Sadekova, Mikhail Kudinov</authors>
+            <year>2021</year>
+            <venue>ICML 2021</venue>
+            <url>https://arxiv.org/abs/2105.06337</url>
+        </paper>
+        
+        <paper>
+            <title>HiFi-GAN: Generative Adversarial Networks for Efficient and High Fidelity Speech Synthesis</title>
+            <authors>Jungil Kong, Jaehyeon Kim, Jaekyoung Bae</authors>
+            <year>2020</year>
+            <venue>NeurIPS 2020</venue>
+            <url>https://arxiv.org/abs/2010.05646</url>
+        </paper>
+        
+        <repository>
+            <name>Speech-Backbones (Huawei Noah's Ark Lab)</name>
+            <url>https://github.com/huawei-noah/Speech-Backbones</url>
+            <description>Original Grad-TTS implementation</description>
+        </repository>
+    </references>
+
+    <contact>
+        <student>
+            <name>Makai Sándor</name>
+            <institution>Budapest University of Technology and Economics</institution>
+            <github>https://github.com/MagyarEper</github>
+        </student>
+    </contact>
+</project>
